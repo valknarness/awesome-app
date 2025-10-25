@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 48 48">
+    <!-- Main structure - Awesome Purple -->
+    <path fill="#9733EE" d="m39.4 23l-.8-4L26 21.6V8h-4v12.3l-13.9-9l-2.2 3.4l15.2 9.8L9.4 39.8l3.2 2.4l11.3-14.8l8.4 12.7l3.4-2.2l-8.4-12.5z" />
+
+    <!-- Center circle - Awesome Pink -->
+    <circle cx="24" cy="24" r="7" fill="#FF69B4" />
+
+    <!-- Outer circles - Gradient from Pink to Purple to Gold -->
+    <circle cx="24" cy="8" r="5" fill="#DA22FF" />      <!-- Top: Primary Purple -->
+    <circle cx="39" cy="21" r="5" fill="#FF69B4" />     <!-- Right: Pink -->
+    <circle cx="7" cy="13" r="5" fill="#FFD700" />      <!-- Left: Gold -->
+    <circle cx="11" cy="41" r="5" fill="#FF1493" />     <!-- Bottom Left: Dark Pink -->
+    <circle cx="34" cy="39" r="5" fill="#E855FF" />     <!-- Bottom Right: Light Purple -->
+</svg>

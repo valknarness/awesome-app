@@ -1,0 +1,100 @@
+name: Build Awesome Database
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Manual trigger
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/db.yml'
+      - 'scripts/build-db.js'
+
+jobs:
+  build-database:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build SQLite Database
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/build-db.js
+
+      - name: Generate database metadata
+        run: |
+          DB_SIZE=$(du -h awesome.db | cut -f1)
+          DB_HASH=$(sha256sum awesome.db | cut -d' ' -f1)
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          cat > db-metadata.json << EOF
+          {
+            "version": "${GITHUB_SHA}",
+            "timestamp": "${TIMESTAMP}",
+            "size": "${DB_SIZE}",
+            "hash": "${DB_HASH}",
+            "lists_count": $(sqlite3 awesome.db "SELECT COUNT(*) FROM awesome_lists"),
+            "repos_count": $(sqlite3 awesome.db "SELECT COUNT(*) FROM repositories"),
+            "readmes_count": $(sqlite3 awesome.db "SELECT COUNT(*) FROM readmes")
+          }
+          EOF
+
+          cat db-metadata.json
+
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: awesome-database
+          path: |
+            awesome.db
+            db-metadata.json
+          retention-days: 90
+
+      - name: Deploy to hosting (optional)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          # Upload to your hosting provider
+          # Example for S3:
+          # aws s3 cp awesome.db s3://your-bucket/awesome.db
+          # aws s3 cp db-metadata.json s3://your-bucket/db-metadata.json
+
+          # Or webhook to your Next.js app
+          curl -X POST "${{ secrets.WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Secret: ${{ secrets.WEBHOOK_SECRET }}" \
+            -d @db-metadata.json
+
+      - name: Create release (on schedule)
+        if: github.event_name == 'schedule'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: db-${{ github.run_number }}
+          name: Database Build ${{ github.run_number }}
+          body: |
+            Automated database build
+
+            **Statistics:**
+            - Lists: $(sqlite3 awesome.db "SELECT COUNT(*) FROM awesome_lists")
+            - Repositories: $(sqlite3 awesome.db "SELECT COUNT(*) FROM repositories")
+            - READMEs: $(sqlite3 awesome.db "SELECT COUNT(*) FROM readmes")
+
+            **Generated:** $(date -u)
+          files: |
+            awesome.db
+            db-metadata.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
