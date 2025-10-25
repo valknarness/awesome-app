@@ -29,7 +29,7 @@ export function CommandMenu({ open, setOpen }: CommandMenuProps) {
 const fetchData = React.useCallback(async () => {
     const response = await fetch(`/api/search?q=${encodeURIComponent(search)}`)
     const data = await response.json()
-    setResults(...data.results);
+    setResults(data.results);
 }, [])
 
   React.useEffect(() => {

@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Search, Star, Filter, SlidersHorizontal, ExternalLink } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -50,7 +51,7 @@ interface StatsResponse {
   categories: { name: string; count: number }[]
 }
 
-export default function SearchPage() {
+function SearchPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -368,5 +369,13 @@ export default function SearchPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SearchPageContent />
+    </Suspense>
   )
 }

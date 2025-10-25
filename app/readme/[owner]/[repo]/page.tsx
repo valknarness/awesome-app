@@ -7,10 +7,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { getDb } from '@/lib/db'
 
 interface PageProps {
-  params: {
+  params: Promise<{
     owner: string
     repo: string
-  }
+  }>
 }
 
 async function getReadmeContent(owner: string, repo: string) {
@@ -49,7 +49,8 @@ async function getReadmeContent(owner: string, repo: string) {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const data = await getReadmeContent(params.owner, params.repo)
+  const { owner, repo } = await params
+  const data = await getReadmeContent(owner, repo)
 
   if (!data) {
     return {
@@ -69,7 +70,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ReadmePage({ params }: PageProps) {
-  const data = await getReadmeContent(params.owner, params.repo)
+  const { owner, repo } = await params
+  const data = await getReadmeContent(owner, repo)
 
   if (!data) {
     notFound()

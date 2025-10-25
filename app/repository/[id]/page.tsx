@@ -43,8 +43,6 @@ interface RepositoryDetailResponse {
 marked.use({
   breaks: true,
   gfm: true,
-  headerIds: true,
-  mangle: false,
 })
 
 marked.use(
