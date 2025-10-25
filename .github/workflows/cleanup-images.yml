@@ -1,0 +1,42 @@
+name: Cleanup Old Docker Images
+
+on:
+  schedule:
+    # Run weekly on Sunday at 3 AM UTC
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      keep_count:
+        description: 'Number of recent images to keep (per tag pattern)'
+        required: false
+        default: '10'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: valknarness/awesome-app
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+      - name: Delete old container images
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: 'awesome-app'
+          package-type: 'container'
+          min-versions-to-keep: ${{ github.event.inputs.keep_count || 10 }}
+          delete-only-untagged-versions: 'true'
+
+      - name: Generate cleanup summary
+        run: |
+          echo "### Docker Image Cleanup :broom:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry:** \`${{ env.REGISTRY }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Kept versions:** ${{ github.event.inputs.keep_count || 10 }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Cleanup Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Old untagged images have been removed to free up storage." >> $GITHUB_STEP_SUMMARY
