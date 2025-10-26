@@ -4,7 +4,21 @@ on:
   schedule:
     # Run every 6 hours
     - cron: '0 */6 * * *'
-  workflow_dispatch: # Manual trigger
+  workflow_dispatch:
+    inputs:
+      build_mode:
+        description: 'Build mode: download (from awesome repo) or build (local indexing)'
+        required: false
+        default: 'download'
+        type: choice
+        options:
+          - download
+          - build
+      awesome_repo:
+        description: 'Awesome repository to download from (owner/repo)'
+        required: false
+        default: 'valknarness/awesome'
+        type: string
   push:
     branches:
       - main
@@ -15,12 +29,22 @@ on:
 jobs:
   build-database:
     runs-on: ubuntu-latest
+    timeout-minutes: 180  # 3 hours for local builds
 
     steps:
-      - name: Checkout repository
+      - name: Checkout awesome-app repository
         uses: actions/checkout@v4
+        with:
+          path: awesome-app
 
-      - name: Install pnpm
+      - name: Checkout awesome CLI repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.inputs.awesome_repo || 'valknarness/awesome' }}
+          path: awesome
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10
@@ -30,76 +54,121 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
+          cache-dependency-path: awesome-app/pnpm-lock.yaml
 
-      - name: Install dependencies
+      - name: Install GitHub CLI
+        run: |
+          # GitHub CLI is pre-installed on ubuntu-latest
+          gh --version
+
+      - name: Install awesome-app dependencies
+        working-directory: awesome-app
         run: pnpm install --frozen-lockfile
 
-      - name: Build SQLite Database
+      - name: Install awesome CLI dependencies
+        working-directory: awesome
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm rebuild better-sqlite3
+          chmod +x awesome
+
+      - name: Build database
+        working-directory: awesome-app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_MODE: ${{ github.event.inputs.build_mode || 'download' }}
+          AWESOME_REPO: ${{ github.event.inputs.awesome_repo || 'valknarness/awesome' }}
         run: |
+          echo "Build Mode: $BUILD_MODE"
+          echo "Source Repo: $AWESOME_REPO"
+
+          # Run the build script
           node scripts/build-db.js
 
-      - name: Generate database metadata
+      - name: Verify database
+        working-directory: awesome-app
         run: |
+          if [ ! -f awesome.db ]; then
+            echo "❌ Database file not found!"
+            exit 1
+          fi
+
           DB_SIZE=$(du -h awesome.db | cut -f1)
-          DB_HASH=$(sha256sum awesome.db | cut -d' ' -f1)
-          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "✅ Database created successfully"
+          echo "Size: $DB_SIZE"
 
-          cat > db-metadata.json << EOF
-          {
-            "version": "${GITHUB_SHA}",
-            "timestamp": "${TIMESTAMP}",
-            "size": "${DB_SIZE}",
-            "hash": "${DB_HASH}",
-            "lists_count": $(sqlite3 awesome.db "SELECT COUNT(*) FROM awesome_lists"),
-            "repos_count": $(sqlite3 awesome.db "SELECT COUNT(*) FROM repositories"),
-            "readmes_count": $(sqlite3 awesome.db "SELECT COUNT(*) FROM readmes")
-          }
-          EOF
+          # Verify it's a valid SQLite database
+          if command -v sqlite3 &> /dev/null; then
+            LISTS_COUNT=$(sqlite3 awesome.db "SELECT COUNT(*) FROM awesome_lists" 2>/dev/null || echo "0")
+            REPOS_COUNT=$(sqlite3 awesome.db "SELECT COUNT(*) FROM repositories" 2>/dev/null || echo "0")
+            READMES_COUNT=$(sqlite3 awesome.db "SELECT COUNT(*) FROM readmes" 2>/dev/null || echo "0")
 
-          cat db-metadata.json
+            echo "Lists: $LISTS_COUNT"
+            echo "Repositories: $REPOS_COUNT"
+            echo "READMEs: $READMES_COUNT"
+          fi
 
       - name: Upload database artifact
         uses: actions/upload-artifact@v4
         with:
           name: awesome-database
           path: |
-            awesome.db
-            db-metadata.json
+            awesome-app/awesome.db
+            awesome-app/db-metadata.json
           retention-days: 90
+          compression-level: 9
 
-      - name: Deploy to hosting (optional)
-        if: github.ref == 'refs/heads/main'
+      - name: Create build summary
+        working-directory: awesome-app
         run: |
-          # Upload to your hosting provider
-          # Example for S3:
-          # aws s3 cp awesome.db s3://your-bucket/awesome.db
-          # aws s3 cp db-metadata.json s3://your-bucket/db-metadata.json
+          cat >> $GITHUB_STEP_SUMMARY <<EOF
+          # 🎉 Awesome Database Build Complete
 
-          # Or webhook to your Next.js app
-          curl -X POST "${{ secrets.WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -H "X-GitHub-Secret: ${{ secrets.WEBHOOK_SECRET }}" \
-            -d @db-metadata.json
+          ## 📊 Build Information
 
-      - name: Create release (on schedule)
-        if: github.event_name == 'schedule'
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: db-${{ github.run_number }}
-          name: Database Build ${{ github.run_number }}
-          body: |
-            Automated database build
+          | Metric | Value |
+          |--------|-------|
+          | Build Mode | ${{ github.event.inputs.build_mode || 'download' }} |
+          | Source Repository | ${{ github.event.inputs.awesome_repo || 'valknarness/awesome' }} |
+          | Workflow Run | [\#${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |
+          | Commit | \`${{ github.sha }}\` |
 
-            **Statistics:**
-            - Lists: $(sqlite3 awesome.db "SELECT COUNT(*) FROM awesome_lists")
-            - Repositories: $(sqlite3 awesome.db "SELECT COUNT(*) FROM repositories")
-            - READMEs: $(sqlite3 awesome.db "SELECT COUNT(*) FROM readmes")
+          EOF
 
-            **Generated:** $(date -u)
-          files: |
-            awesome.db
-            db-metadata.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Add metadata if available
+          if [ -f db-metadata.json ]; then
+            echo "## 📈 Database Statistics" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+            cat db-metadata.json >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          cat >> $GITHUB_STEP_SUMMARY <<EOF
+
+          ## 📥 Download Instructions
+
+          \`\`\`bash
+          # Using GitHub CLI
+          gh run download ${{ github.run_id }} -n awesome-database
+
+          # Or visit the workflow run page:
+          # ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          \`\`\`
+
+          ## 🐳 Docker Build
+
+          This database will be automatically used in the next Docker image build.
+          EOF
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY <<EOF
+          # ❌ Database Build Failed
+
+          **Build Mode:** ${{ github.event.inputs.build_mode || 'download' }}
+          **Source Repo:** ${{ github.event.inputs.awesome_repo || 'valknarness/awesome' }}
+
+          Please check the workflow logs for details.
+          EOF

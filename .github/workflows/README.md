@@ -8,15 +8,36 @@ This directory contains automated workflows for building, testing, and deploying
 
 **Triggers:**
 - Schedule: Every 6 hours
-- Manual: `workflow_dispatch`
+- Manual: `workflow_dispatch` with options:
+  - `build_mode`: `download` (default) or `build`
+  - `awesome_repo`: Source repository (default: `valknarness/awesome`)
 - Push to main (when db.yml or build-db.js changes)
 
 **Purpose:**
-Builds the SQLite database by scraping awesome lists from GitHub.
+Builds the SQLite database using one of two methods:
+
+1. **Download Mode** (default, fast ~5 min):
+   - Downloads pre-built database from the awesome CLI repository
+   - Uses GitHub Actions artifacts from the upstream repo
+   - Fallback to local build if download fails
+
+2. **Build Mode** (slow ~1-2 hours):
+   - Clones the awesome CLI repository
+   - Runs full indexing using `./awesome index`
+   - Scrapes all awesome lists from GitHub
+
+**Dependencies:**
+- Requires awesome CLI repository (checked out during workflow)
+- GitHub CLI for artifact downloads
+- better-sqlite3 for database operations
 
 **Artifacts:**
 - `awesome.db` - SQLite database file
-- `db-metadata.json` - Metadata about the build (timestamp, hash, counts)
+- `db-metadata.json` - Metadata including:
+  - Build mode used (download/build)
+  - Source repository
+  - Timestamp, hash, counts
+  - Statistics (lists, repos, READMEs)
 
 **Retention:** 90 days
 
@@ -109,7 +130,17 @@ graph LR
 ### Manual Database Build
 
 ```bash
+# Download pre-built database (fast, default)
 gh workflow run db.yml
+
+# Download from specific repository
+gh workflow run db.yml -f awesome_repo=owner/awesome
+
+# Build locally (slow but fresh)
+gh workflow run db.yml -f build_mode=build
+
+# Custom source and build mode
+gh workflow run db.yml -f build_mode=build -f awesome_repo=owner/awesome
 ```
 
 ### Manual Docker Build

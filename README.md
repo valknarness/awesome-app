@@ -30,12 +30,15 @@ This webapp perfectly matches the **beautiful purple/pink/gold theme** from the 
    - Typography plugin
 
 3. **GitHub Actions Workflow**
-   - Automated database building
-   - Runs every 6 hours
-   - Manual trigger support
-   - Artifact upload
-   - Release creation
-   - Webhook integration
+   - Two build modes:
+     - **Download Mode**: Fast (~5 min) - downloads pre-built database from awesome CLI repo
+     - **Build Mode**: Slow (~1-2 hours) - builds locally using awesome CLI indexer
+   - Runs every 6 hours (download mode by default)
+   - Manual trigger with mode selection
+   - Configurable source repository
+   - Artifact upload (90-day retention)
+   - Metadata generation with build stats
+   - Fallback to local build if download fails
 
 4. **Web Worker System**
    - Smart polling with exponential backoff
@@ -82,7 +85,7 @@ awesome-web/
 │   ├── manifest.json       ✅ PWA manifest
 │   └── icons/              🔨 Generate from logo
 ├── scripts/
-│   └── build-db.js         ✅ Database builder
+│   └── build-db.js         ✅ Database builder (download/build modes)
 ├── tailwind.config.ts      ✅ Custom theme
 └── next.config.js          ✅ PWA & optimization
 ```
