@@ -13,6 +13,10 @@ RUN corepack enable pnpm && pnpm install --frozen-lockfile
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+
+# Build argument to control database inclusion
+ARG INCLUDE_DATABASE=false
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
@@ -27,6 +31,9 @@ RUN corepack enable pnpm && pnpm run build
 # Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
+
+# Build argument to control database inclusion (passed from builder)
+ARG INCLUDE_DATABASE=false
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -51,6 +58,17 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Create directory for SQLite database
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
+
+# Conditionally copy pre-built database if INCLUDE_DATABASE=true
+# The database is downloaded by GitHub Actions before Docker build
+RUN if [ "$INCLUDE_DATABASE" = "true" ]; then \
+      echo "Including database in image..."; \
+    else \
+      echo "Database will be mounted at runtime or built on first run"; \
+    fi
+
+COPY --from=builder --chown=nextjs:nodejs /app/awesome.db* /app/ || true
+COPY --from=builder --chown=nextjs:nodejs /app/db-metadata.json /app/ || true
 
 USER nextjs
 

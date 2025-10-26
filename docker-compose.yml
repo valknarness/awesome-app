@@ -3,12 +3,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # Set to true to include pre-built database in image
+        # Set to false to mount database at runtime
+        INCLUDE_DATABASE: false
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
     volumes:
-      # Mount SQLite database directory
+      # Mount SQLite database directory (used when INCLUDE_DATABASE=false)
       - ./data:/app/data
     restart: unless-stopped
     healthcheck:

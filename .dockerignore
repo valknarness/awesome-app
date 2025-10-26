@@ -56,10 +56,13 @@ next-env.d.ts
 .claude
 
 # SQLite database files (will be mounted as volume)
+# Note: awesome.db is explicitly included when built by CI
 *.db
+!awesome.db
 *.db-journal
 *.sqlite
 *.sqlite3
+!db-metadata.json
 
 # misc
 .mcp.json

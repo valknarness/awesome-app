@@ -22,7 +22,12 @@ env:
   IMAGE_NAME: valknarness/awesome-app
 
 jobs:
+  build-database:
+    uses: ./.github/workflows/db.yml
+    secrets: inherit
+
   build-and-push:
+    needs: build-database
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -32,6 +37,27 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+
+    - name: Download database artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: awesome-database
+        path: ./
+
+    - name: Verify database artifact
+      run: |
+        ls -lah awesome.db* || echo "No database file found"
+        cat db-metadata.json || echo "No metadata file found"
+
+    - name: Extract database metadata
+      id: db-meta
+      run: |
+        if [ -f db-metadata.json ]; then
+          echo "db_timestamp=$(jq -r '.timestamp' db-metadata.json)" >> $GITHUB_OUTPUT
+          echo "db_hash=$(jq -r '.hash' db-metadata.json)" >> $GITHUB_OUTPUT
+          echo "lists_count=$(jq -r '.lists_count' db-metadata.json)" >> $GITHUB_OUTPUT
+          echo "repos_count=$(jq -r '.repos_count' db-metadata.json)" >> $GITHUB_OUTPUT
+        fi
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -70,6 +96,10 @@ jobs:
           org.opencontainers.image.description=Next.js application for exploring awesome lists
           org.opencontainers.image.vendor=valknarness
           org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          app.database.timestamp=${{ steps.db-meta.outputs.db_timestamp }}
+          app.database.hash=${{ steps.db-meta.outputs.db_hash }}
+          app.database.lists_count=${{ steps.db-meta.outputs.lists_count }}
+          app.database.repos_count=${{ steps.db-meta.outputs.repos_count }}
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
@@ -83,6 +113,7 @@ jobs:
         cache-to: type=gha,mode=max
         build-args: |
           NODE_ENV=production
+          INCLUDE_DATABASE=false
 
     - name: Generate image digest
       if: github.event_name != 'pull_request'
@@ -96,6 +127,12 @@ jobs:
         echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
         echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
         echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Database Info:**" >> $GITHUB_STEP_SUMMARY
+        echo "- Built: ${{ steps.db-meta.outputs.db_timestamp }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Lists: ${{ steps.db-meta.outputs.lists_count }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Repositories: ${{ steps.db-meta.outputs.repos_count }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Hash: \`${{ steps.db-meta.outputs.db_hash }}\`" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Pull command:**" >> $GITHUB_STEP_SUMMARY
         echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
