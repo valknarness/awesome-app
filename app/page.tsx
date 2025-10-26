@@ -9,7 +9,12 @@ export const revalidate = 0
 
 export default function Home() {
   // Provide fallback stats if database doesn't exist (e.g., during Docker build)
-  let stats = { totalLists: 100, totalRepositories: 10000, totalReadmes: 10000, lastUpdated: null }
+  let stats: { totalLists: number; totalRepositories: number; totalReadmes: number; lastUpdated: string | null } = {
+    totalLists: 100,
+    totalRepositories: 10000,
+    totalReadmes: 10000,
+    lastUpdated: null
+  }
 
   // Try to get real stats from database, fall back to defaults if not available
   try {
