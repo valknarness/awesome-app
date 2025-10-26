@@ -19,6 +19,18 @@ on:
         required: false
         default: 'valknarness/awesome'
         type: string
+  workflow_call:
+    inputs:
+      build_mode:
+        description: 'Build mode: download (from awesome repo) or build (local indexing)'
+        required: false
+        default: 'download'
+        type: string
+      awesome_repo:
+        description: 'Awesome repository to download from (owner/repo)'
+        required: false
+        default: 'valknarness/awesome'
+        type: string
   push:
     branches:
       - main
