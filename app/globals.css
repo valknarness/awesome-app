@@ -6,6 +6,19 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@layer base {
+	* {
+		@supports (color: color-mix(in lab, red, red)) {
+			outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+		}
+	}
+
+	* {
+		border-color: var(--border);
+		outline-color: var(--ring);
+	}
+}
+
 /* Awesome Gradient Text - Dynamic theme support */
 .gradient-text, .prose h1 {
   background: var(--gradient-awesome);
@@ -222,11 +235,6 @@ kbd {
 ::selection {
   background: color-mix(in oklab, var(--primary) 30%, transparent);
   color: inherit;
-}
-
-/* Focus Ring */
-*:focus-visible {
-  @apply outline-none ring-2 ring-primary ring-offset-2;
 }
 
 /* Loading Spinner */

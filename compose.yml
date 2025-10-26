@@ -1,0 +1,60 @@
+services:
+  # Awesome App - Next.js application for exploring awesome lists
+  awesome-app:
+    image: ${AWESOME_IMAGE:-ghcr.io/valknarness/awesome-app:latest}
+    container_name: ${AWESOME_COMPOSE_PROJECT_NAME:-awesome}_app
+    restart: unless-stopped
+    networks:
+      - awesome-network
+    ports:
+      - "${AWESOME_PORT:-3000}:3000"
+    environment:
+      # Node
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+
+      # Next.js
+      NEXT_TELEMETRY_DISABLED: ${NEXT_TELEMETRY_DISABLED:-1}
+
+      # Database path
+      AWESOME_DB_PATH: ${AWESOME_DB_PATH:-/app/awesome.db}
+
+      # Optional: Webhook secret for database updates
+      WEBHOOK_SECRET: ${AWESOME_WEBHOOK_SECRET:-}
+
+      # Optional: GitHub token for rate limits
+      GITHUB_TOKEN: ${AWESOME_GITHUB_TOKEN:-}
+
+      # Timezone
+      TZ: ${TIMEZONE:-UTC}
+
+    volumes:
+      # Mount database directory for persistence
+      - ${AWESOME_DB_VOLUME:-awesome-data}:/app/data
+      # Optional: Mount a pre-existing database
+      # - ./awesome.db:/app/awesome.db:ro
+
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Uncomment for development with local build
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    #   args:
+    #     INCLUDE_DATABASE: false
+    #     NODE_ENV: production
+
+networks:
+  awesome-network:
+    driver: bridge
+    name: ${AWESOME_COMPOSE_PROJECT_NAME:-awesome}_network
+
+volumes:
+  awesome-data:
+    driver: local

@@ -734,7 +734,7 @@ export const EditorProvider = ({
 
   return (
     <TooltipProvider>
-      <div className={cn(className, '[&_.ProseMirror-focused]:outline-none')}>
+      <div className={cn(className, '[&_.ProseMirror-focused]:outline-hidden')}>
         <TiptapEditorProvider
           editorProps={{
             handleKeyDown: (_view, event) => {
@@ -1374,7 +1374,7 @@ export const EditorLinkSelector = ({
         <form className="flex p-1" onSubmit={handleSubmit}>
           <input
             aria-label="Link URL"
-            className="flex-1 bg-background p-1 text-sm outline-none"
+            className="flex-1 bg-background p-1 text-sm outline-hidden"
             defaultValue={defaultValue ?? ''}
             onChange={(event) => setUrl(event.target.value)}
             placeholder="Paste a link"
