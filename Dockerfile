@@ -59,16 +59,20 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Create directory for SQLite database
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
 
-# Conditionally copy pre-built database if INCLUDE_DATABASE=true
+# Conditionally copy pre-built database if it exists
 # The database is downloaded by GitHub Actions before Docker build
-RUN if [ "$INCLUDE_DATABASE" = "true" ]; then \
-      echo "Including database in image..."; \
+RUN --mount=type=bind,from=builder,source=/app,target=/tmp/builder \
+    if [ -f /tmp/builder/awesome.db ]; then \
+      echo "Copying database files..."; \
+      cp /tmp/builder/awesome.db* /app/ 2>/dev/null || true; \
+      chown nextjs:nodejs /app/awesome.db* 2>/dev/null || true; \
     else \
-      echo "Database will be mounted at runtime or built on first run"; \
+      echo "No database found, will be mounted at runtime or built on first run"; \
+    fi && \
+    if [ -f /tmp/builder/db-metadata.json ]; then \
+      cp /tmp/builder/db-metadata.json /app/; \
+      chown nextjs:nodejs /app/db-metadata.json; \
     fi
-
-COPY --from=builder --chown=nextjs:nodejs /app/awesome.db* /app/ || true
-COPY --from=builder --chown=nextjs:nodejs /app/db-metadata.json /app/ || true
 
 USER nextjs
 
