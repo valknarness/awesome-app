@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3'
 import { join } from 'path'
+import { existsSync } from 'fs'
 
 // Database path - using user's .awesome directory
 const DB_PATH = process.env.AWESOME_DB_PATH || join(process.env.HOME || '', '.awesome', 'awesome.db')
@@ -8,6 +9,10 @@ let db: Database.Database | null = null
 
 export function getDb(): Database.Database {
   if (!db) {
+    // Check if database file exists before trying to open it
+    if (!existsSync(DB_PATH)) {
+      throw new Error(`Database file not found at ${DB_PATH}`)
+    }
     db = new Database(DB_PATH, { readonly: true })
     // Enable WAL mode for better concurrency
     db.pragma('journal_mode = WAL')

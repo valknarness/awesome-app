@@ -3,8 +3,23 @@ import { ArrowRight, Search, Star, Sparkles, Zap, Shield, Heart } from 'lucide-r
 import { getStats } from '@/lib/db'
 import { AwesomeIcon } from '@/components/ui/awesome-icon'
 
+// Make this page dynamic to avoid pre-rendering during build
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default function Home() {
-  const stats = getStats()
+  // Provide fallback stats if database doesn't exist (e.g., during Docker build)
+  let stats = { totalLists: 100, totalRepositories: 10000, totalReadmes: 10000, lastUpdated: null }
+
+  // Try to get real stats from database, fall back to defaults if not available
+  try {
+    stats = getStats()
+  } catch (error) {
+    // Database not available (e.g., during build) - use fallback stats
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('Database not available, using fallback stats')
+    }
+  }
   return (
     <div className="min-h-screen bg-linear-to-br from-background via-background to-primary/5">
       {/* Hero Section */}
