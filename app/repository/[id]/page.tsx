@@ -8,9 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PushToListButton } from '@/components/personal-list/push-to-list-button'
-import { marked } from 'marked'
-import { markedHighlight } from 'marked-highlight'
-import hljs from 'highlight.js'
+import { ReadmeViewer } from '@/components/readme/readme-viewer'
 
 interface Repository {
   id: number
@@ -38,22 +36,6 @@ interface RepositoryDetailResponse {
   topics: string | null
   readme: Readme | null
 }
-
-// Configure marked with syntax highlighting and options
-marked.use({
-  breaks: true,
-  gfm: true,
-})
-
-marked.use(
-  markedHighlight({
-    langPrefix: 'hljs language-',
-    highlight(code, lang) {
-      const language = hljs.getLanguage(lang) ? lang : 'plaintext'
-      return hljs.highlight(code, { language }).value
-    }
-  })
-)
 
 export default function RepositoryDetailPage() {
   const params = useParams()
@@ -84,27 +66,6 @@ export default function RepositoryDetailPage() {
         setLoading(false)
       })
   }, [repositoryId])
-
-  // Determine if content is already HTML or needs markdown parsing
-  // Must be called before any conditional returns
-  const readmeHtml = React.useMemo(() => {
-    if (!data?.readme?.content) return null
-
-    const content = data.readme.content
-    // Ensure content is a string before processing
-    if (typeof content !== 'string' || !content.trim()) return null
-
-    // Check if content is already HTML (starts with < tag)
-    const isHtml = content.trim().startsWith('<')
-
-    if (isHtml) {
-      // Content is already HTML, use as-is
-      return content
-    } else {
-      // Content is markdown, parse it
-      return marked.parse(content) as string
-    }
-  }, [data?.readme?.content])
 
   const topics = data?.topics ? data.topics.split(',') : []
 
@@ -229,11 +190,10 @@ export default function RepositoryDetailPage() {
 
       {/* README Content */}
       <div className="mx-auto max-w-5xl px-6 py-8">
-        {readmeHtml ? (
-          <article
-            className="prose prose-lg prose-slate dark:prose-invert max-w-none rounded-xl border border-border bg-card p-8 shadow-sm"
-            dangerouslySetInnerHTML={{ __html: readmeHtml }}
-          />
+        {data.readme?.content ? (
+          <div className="rounded-xl border border-border bg-card p-8 shadow-sm">
+            <ReadmeViewer content={data.readme.content} />
+          </div>
         ) : (
           <div className="rounded-xl border border-dashed border-border bg-muted/30 p-12 text-center">
             <AlertCircle className="mx-auto mb-4 h-8 w-8 text-muted-foreground" />
