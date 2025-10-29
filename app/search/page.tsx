@@ -290,13 +290,19 @@ function SearchPageContent() {
                   <div className="mb-2 flex items-start justify-between gap-4">
                     <h3 className="text-xl font-semibold">
                       <a
+                        href={`/repository/${result.repository_id}`}
+                        className="text-primary hover:text-primary/80"
+                      >
+                        {result.repository_name}
+                      </a>
+                      <a
                         href={result.repository_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group inline-flex items-center gap-2 text-primary hover:text-primary/80"
+                        className="ml-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
+                        title="View on GitHub"
                       >
-                        {result.repository_name}
-                        <ExternalLink className="h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
+                        <ExternalLink className="h-4 w-4" />
                       </a>
                     </h3>
                     {result.stars !== null && (
