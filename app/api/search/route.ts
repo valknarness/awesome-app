@@ -40,8 +40,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(results)
   } catch (error) {
     console.error('Search API error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Error details:', errorMessage)
+
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        error: 'Internal server error',
+        ...(process.env.NODE_ENV === 'development' && { details: errorMessage })
+      },
       { status: 500 }
     )
   }

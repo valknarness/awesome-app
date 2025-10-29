@@ -128,7 +128,8 @@ export function searchRepositories(options: SearchOptions): PaginatedResults<Sea
       fts.rank,
       snippet(readmes_fts, 2, '<mark>', '</mark>', '...', 32) as snippet
     FROM readmes_fts fts
-    JOIN repositories r ON fts.rowid = r.id
+    JOIN readmes rm ON fts.rowid = rm.rowid
+    JOIN repositories r ON rm.repository_id = r.id
     LEFT JOIN awesome_lists al ON r.awesome_list_id = al.id
     WHERE readmes_fts MATCH ?
   `
