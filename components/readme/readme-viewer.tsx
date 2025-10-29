@@ -8,9 +8,10 @@ import 'highlight.js/styles/github-dark.css'
 
 interface ReadmeViewerProps {
   content: string
+  repositoryUrl?: string
 }
 
-export function ReadmeViewer({ content }: ReadmeViewerProps) {
+export function ReadmeViewer({ content, repositoryUrl }: ReadmeViewerProps) {
   const [html, setHtml] = React.useState('')
 
   React.useEffect(() => {
@@ -30,13 +31,59 @@ export function ReadmeViewer({ content }: ReadmeViewerProps) {
       breaks: true,
     })
 
+    // Custom renderer to fix relative image URLs
+    if (repositoryUrl) {
+      const renderer = {
+        image(href: string, title: string | null, text: string) {
+          let imgSrc = href
+
+          // Convert GitHub URLs to raw content URLs
+          if (repositoryUrl.includes('github.com')) {
+            const match = repositoryUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/)
+            if (match) {
+              const [, owner, repo] = match
+              const cleanRepo = repo.replace(/\.git$/, '')
+
+              // Handle relative URLs
+              if (!imgSrc.startsWith('http://') && !imgSrc.startsWith('https://') && !imgSrc.startsWith('//')) {
+                // Remove leading ./
+                imgSrc = imgSrc.replace(/^\.\//, '')
+                // Build raw GitHub URL (main/master branch assumed)
+                imgSrc = `https://raw.githubusercontent.com/${owner}/${cleanRepo}/master/${imgSrc}`
+              }
+              // Handle GitHub blob URLs - convert to raw
+              else if (imgSrc.includes('github.com') && imgSrc.includes('/blob/')) {
+                imgSrc = imgSrc.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/')
+              }
+            }
+          }
+
+          const titleAttr = title ? ` title="${title}"` : ''
+
+          // Check if it's a badge (shields.io, badgen, etc.)
+          const isBadge = imgSrc.includes('shields.io') ||
+                         imgSrc.includes('badgen.net') ||
+                         imgSrc.includes('badge') ||
+                         imgSrc.includes('img.shields') ||
+                         imgSrc.match(/\/badges?\//)
+
+          if (isBadge) {
+            return `<img src="${imgSrc}" alt="${text}" ${titleAttr} class="inline-block !my-0 !mx-1 align-middle" />`
+          }
+
+          return `<img src="${imgSrc}" alt="${text}" ${titleAttr} />`
+        }
+      }
+      marked.use({ renderer })
+    }
+
     // Parse markdown
     const parseMarkdown = async () => {
       const result = await marked.parse(content)
       setHtml(result)
     }
     parseMarkdown()
-  }, [content])
+  }, [content, repositoryUrl])
 
   return (
     <article

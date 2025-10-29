@@ -192,7 +192,7 @@ export default function RepositoryDetailPage() {
       <div className="mx-auto max-w-5xl px-6 py-8">
         {data.readme?.content ? (
           <div className="rounded-xl border border-border bg-card p-8 shadow-sm">
-            <ReadmeViewer content={data.readme.content} />
+            <ReadmeViewer content={data.readme.content} repositoryUrl={data.url} />
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-border bg-muted/30 p-12 text-center">

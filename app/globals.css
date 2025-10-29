@@ -237,6 +237,21 @@ kbd {
   color: inherit;
 }
 
+/* Search Highlight - Discreet styling */
+mark {
+  background: color-mix(in oklab, var(--primary) 15%, transparent);
+  color: var(--primary);
+  font-weight: 600;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  border-bottom: 2px solid color-mix(in oklab, var(--primary) 40%, transparent);
+}
+
+.dark mark {
+  background: color-mix(in oklab, var(--primary) 20%, transparent);
+  color: var(--primary-foreground);
+}
+
 /* Loading Spinner */
 @keyframes spin-awesome {
   from {

@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Search, Star, Filter, SlidersHorizontal, ExternalLink } from 'lucide-react'
+import { Search, Star, Filter, SlidersHorizontal, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -127,6 +127,48 @@ function SearchPageContent() {
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))
+  }
+
+  // Strip markdown and HTML from descriptions
+  const stripMarkdown = (text: string | null): string => {
+    if (!text) return ''
+    return text
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Convert [text](url) to text
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1') // Convert ![alt](url) to alt text
+      .replace(/[*_~`#]/g, '') // Remove markdown formatting chars
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim()
+  }
+
+  // Generate page numbers for pagination
+  const getPageNumbers = (current: number, total: number): (number | string)[] => {
+    const delta = 2
+    const range: (number | string)[] = []
+    const rangeWithDots: (number | string)[] = []
+    let l: number | undefined
+
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+        range.push(i)
+      }
+    }
+
+    for (const i of range) {
+      if (l !== undefined && typeof i === 'number') {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1)
+        } else if (i - l !== 1) {
+          rangeWithDots.push('...')
+        }
+      }
+      rangeWithDots.push(i)
+      if (typeof i === 'number') {
+        l = i
+      }
+    }
+
+    return rangeWithDots
   }
 
   React.useEffect(() => {
@@ -314,7 +356,7 @@ function SearchPageContent() {
                   </div>
 
                   {result.description && (
-                    <p className="mb-3 text-muted-foreground">{result.description}</p>
+                    <p className="mb-3 text-muted-foreground">{stripMarkdown(result.description)}</p>
                   )}
 
                   {result.snippet && (
@@ -343,23 +385,43 @@ function SearchPageContent() {
 
             {/* Pagination */}
             {results.totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-center gap-2">
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
                 <Button
                   variant="outline"
+                  size="icon"
                   disabled={results.page === 1}
                   onClick={() => performSearch(query, results.page - 1)}
+                  title="Previous page"
                 >
-                  Previous
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="mx-4 text-sm text-muted-foreground">
-                  Page {results.page} of {results.totalPages}
-                </span>
+
+                {getPageNumbers(results.page, results.totalPages).map((pageNum, idx) =>
+                  pageNum === '...' ? (
+                    <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">
+                      ...
+                    </span>
+                  ) : (
+                    <Button
+                      key={pageNum}
+                      variant={pageNum === results.page ? 'default' : 'outline'}
+                      size="icon"
+                      onClick={() => performSearch(query, pageNum as number)}
+                      className={pageNum === results.page ? 'btn-awesome' : ''}
+                    >
+                      {pageNum}
+                    </Button>
+                  )
+                )}
+
                 <Button
                   variant="outline"
+                  size="icon"
                   disabled={results.page === results.totalPages}
                   onClick={() => performSearch(query, results.page + 1)}
+                  title="Next page"
                 >
-                  Next
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             )}

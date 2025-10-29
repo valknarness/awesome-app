@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { WorkerProvider } from '@/components/providers/worker-provider'
 import { CommandProvider } from '@/components/providers/command-provider'
 import { AppHeader } from '@/components/layout/app-header'
+import { AppFooter } from '@/components/layout/app-footer'
 import { ThemeProvider } from 'next-themes'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -203,8 +204,11 @@ export default function RootLayout({
         >
           <WorkerProvider>
             <CommandProvider>
-              <AppHeader />
-              {children}
+              <div className="flex min-h-screen flex-col">
+                <AppHeader />
+                <main className="flex-1">{children}</main>
+                <AppFooter />
+              </div>
             </CommandProvider>
           </WorkerProvider>
           <Toaster />

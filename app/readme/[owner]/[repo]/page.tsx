@@ -92,7 +92,7 @@ export default async function ReadmePage({ params }: PageProps) {
             </div>
           }
         >
-          <ReadmeViewer content={data.content} />
+          <ReadmeViewer content={data.content} repositoryUrl={data.metadata.url} />
         </Suspense>
       </div>
     </div>
